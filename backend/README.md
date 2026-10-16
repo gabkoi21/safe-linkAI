@@ -25,6 +25,30 @@ $ uv run fastapi dev
 
 The API is available at `http://localhost:8000`, with automatic interactive docs at `http://localhost:8000/docs`.
 
+### Windows PowerShell without uv
+
+From the project root, create and install a backend-local environment:
+
+```powershell
+python -m venv backend/.venv
+python -m pip --python backend/.venv/Scripts/python.exe install -e ./backend
+```
+
+Then start the API from the `backend` directory:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+```
+
+To start without activating an environment, run `./start.ps1` from `backend`.
+This uses `backend/.venv` explicitly. The uv workspace workflow above instead
+uses `.venv` in the project root; install dependencies in the environment you use.
+
+The API docs and health check work without PostgreSQL. Login and data operations
+require the database and migrations described above. Stop an existing backend
+before starting another server on port 8000.
+
 ## General Workflow
 
 Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter at `.venv/bin/python` in the project root.

@@ -9,10 +9,11 @@ import {
   UsersService,
 } from "@/client"
 import { handleError } from "@/utils"
+import { guestMode, guestUser } from "@/lib/guestMode"
 import useCustomToast from "./useCustomToast"
 
 const isLoggedIn = () => {
-  return localStorage.getItem("access_token") !== null
+  return guestMode || localStorage.getItem("access_token") !== null
 }
 
 const useAuth = () => {
@@ -23,7 +24,7 @@ const useAuth = () => {
   const { data: user } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
     queryFn: async () => (await UsersService.readUserMe()).data,
-    enabled: isLoggedIn(),
+    enabled: !guestMode && isLoggedIn(),
   })
 
   const signUpMutation = useMutation({
@@ -62,7 +63,7 @@ const useAuth = () => {
     signUpMutation,
     loginMutation,
     logout,
-    user,
+    user: guestMode ? guestUser : user,
   }
 }
 

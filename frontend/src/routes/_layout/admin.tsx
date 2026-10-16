@@ -8,6 +8,7 @@ import { columns, type UserTableData } from "@/components/Admin/columns"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
 import useAuth from "@/hooks/useAuth"
+import { guestMode } from "@/lib/guestMode"
 
 function getUsersQueryOptions() {
   return {
@@ -20,6 +21,7 @@ function getUsersQueryOptions() {
 export const Route = createFileRoute("/_layout/admin")({
   component: Admin,
   beforeLoad: async () => {
+    if (guestMode) throw redirect({ to: "/" })
     const { data: user } = await UsersService.readUserMe()
     if (!user.is_superuser) {
       throw redirect({

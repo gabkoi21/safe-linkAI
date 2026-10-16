@@ -5,6 +5,7 @@ import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
+import { guestMode } from "@/lib/guestMode"
 
 const tabsConfig = [
   { value: "my-profile", title: "My profile", component: UserInformation },
@@ -31,6 +32,17 @@ function UserSettings() {
 
   if (!currentUser) {
     return null
+  }
+
+  if (guestMode) {
+    return (
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">User Settings</h1>
+        <p className="text-muted-foreground">
+          Account settings will be available once login and the database are enabled.
+        </p>
+      </div>
+    )
   }
 
   return (

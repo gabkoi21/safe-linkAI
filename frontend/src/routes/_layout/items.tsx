@@ -8,6 +8,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import AddItem from "@/components/Items/AddItem"
 import { columns } from "@/components/Items/columns"
 import PendingItems from "@/components/Pending/PendingItems"
+import { guestMode } from "@/lib/guestMode"
 
 function getItemsQueryOptions() {
   return {
@@ -62,9 +63,15 @@ function Items() {
           <h1 className="text-2xl font-bold tracking-tight">Items</h1>
           <p className="text-muted-foreground">Create and manage your items</p>
         </div>
-        <AddItem />
+        {!guestMode && <AddItem />}
       </div>
-      <ItemsTable />
+      {guestMode ? (
+        <p className="text-muted-foreground">
+          Items will be available once the database is connected.
+        </p>
+      ) : (
+        <ItemsTable />
+      )}
     </div>
   )
 }

@@ -1,4 +1,9 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useLocation,
+} from "@tanstack/react-router"
 
 import { Footer } from "@/components/Common/Footer"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -8,11 +13,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { isLoggedIn } from "@/hooks/useAuth"
+import { guestMode } from "@/lib/guestMode"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
+  beforeLoad: async ({ location }) => {
+    if (location.pathname !== "/" && !isLoggedIn()) {
       throw redirect({
         to: "/login",
       })
@@ -21,6 +27,9 @@ export const Route = createFileRoute("/_layout")({
 })
 
 function Layout() {
+  const pathname = useLocation({ select: (location) => location.pathname })
+  if (pathname === "/") return <Outlet />
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -30,6 +39,12 @@ function Layout() {
         </header>
         <main className="flex-1 p-6 md:p-8">
           <div className="mx-auto max-w-7xl">
+            {guestMode && (
+              <p className="mb-6 rounded-md border p-3 text-sm text-muted-foreground">
+                Guest preview. Login is skipped and the database is not
+                connected.
+              </p>
+            )}
             <Outlet />
           </div>
         </main>
