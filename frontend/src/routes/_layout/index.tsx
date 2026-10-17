@@ -70,6 +70,7 @@ function Dashboard() {
   const [messageText, setMessageText] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [url, setUrl] = useState("")
+  const [query, setQuery] = useState("")
   const [report, setReport] = useState<SecurityReportData | null>(null)
   const [submissions, setSubmissions] = useState<
     { report: SecurityReportData; completedAt: string }[]
@@ -93,7 +94,6 @@ function Dashboard() {
   )
   const [analyzing, setAnalyzing] = useState(false)
   const analysisInFlight = useRef(false)
-  const [query, setQuery] = useState("")
   const hash = useLocation({ select: (location) => location.hash })
   const navigate = useNavigate()
   const submitView = hash === "submit"
