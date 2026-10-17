@@ -25,7 +25,12 @@ sent to Google AI and stored privately. Failures show an error, without a sample
 report. URL checks are connected through `/api/v1/analysis/url`; the report
 separates Gemma's URL-pattern review from Google Safe Browsing reputation.
 Unavailable reputation checks are labeled and never shown as a safety verdict.
-File checks are not connected yet.
+The File tab calls `/api/v1/analysis/file` for TXT, PDF, DOCX, JPG, JPEG, and PNG
+uploads (one file, up to 10 MB). Reports show file metadata and the content that
+was reviewed. PDF/DOCX use extracted text; images use Gemma visual understanding.
+Uploads are stored privately on the backend, and extracted text or normalized
+images are sent to Google AI. These checks are content assessments, not antivirus
+scans. Scanned PDFs should be submitted as JPG/PNG screenshots.
 
 Run `uv run bash scripts/prestart.sh` and `uv run fastapi dev` from the `backend` directory, with PostgreSQL running in Docker Compose. See [../development.md](../development.md) for the complete setup.
 

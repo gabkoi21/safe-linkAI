@@ -35,6 +35,28 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * FindingResult
+ */
+export type FindingResult = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Severity
+     */
+    severity: 'low' | 'medium' | 'high' | 'unknown';
+    /**
+     * Evidence
+     */
+    evidence?: string | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -45,74 +67,6 @@ export type HTTPValidationError = {
 };
 
 /**
- * ItemCreate
- */
-export type ItemCreate = {
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description?: string | null;
-};
-
-/**
- * ItemPublic
- */
-export type ItemPublic = {
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description?: string | null;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Owner Id
-     */
-    owner_id: string;
-    /**
-     * Created At
-     */
-    created_at?: string | null;
-};
-
-/**
- * ItemUpdate
- */
-export type ItemUpdate = {
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Description
-     */
-    description?: string | null;
-};
-
-/**
- * ItemsPublic
- */
-export type ItemsPublic = {
-    /**
-     * Data
-     */
-    data: Array<ItemPublic>;
-    /**
-     * Count
-     */
-    count: number;
-};
-
-/**
  * Message
  */
 export type Message = {
@@ -120,6 +74,54 @@ export type Message = {
      * Message
      */
     message: string;
+};
+
+/**
+ * MessageAnalysisRequest
+ */
+export type MessageAnalysisRequest = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
+ * MessageAnalysisResponse
+ */
+export type MessageAnalysisResponse = {
+    /**
+     * Risk Score
+     */
+    risk_score: number;
+    /**
+     * Risk Level
+     */
+    risk_level: 'low' | 'medium' | 'high' | 'unknown';
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Recommended Action
+     */
+    recommended_action: string;
+    /**
+     * Findings
+     */
+    findings: Array<FindingResult>;
+    /**
+     * Submission Id
+     */
+    submission_id: string;
+    /**
+     * Report Id
+     */
+    report_id: string;
+    /**
+     * Model Version
+     */
+    model_version: string;
 };
 
 /**
@@ -159,6 +161,32 @@ export type PrivateUserCreate = {
 };
 
 /**
+ * ReputationResult
+ */
+export type ReputationResult = {
+    /**
+     * Provider
+     */
+    provider?: 'google_safe_browsing';
+    /**
+     * Status
+     */
+    status: 'matched' | 'no_match' | 'unavailable' | 'not_configured';
+    /**
+     * Threat Types
+     */
+    threat_types?: Array<string>;
+    /**
+     * Checked At
+     */
+    checked_at?: string | null;
+    /**
+     * Detail
+     */
+    detail: string;
+};
+
+/**
  * Token
  */
 export type Token = {
@@ -184,6 +212,63 @@ export type UpdatePassword = {
      * New Password
      */
     new_password: string;
+};
+
+/**
+ * UrlAnalysisRequest
+ */
+export type UrlAnalysisRequest = {
+    /**
+     * Url
+     */
+    url: string;
+};
+
+/**
+ * UrlAnalysisResponse
+ */
+export type UrlAnalysisResponse = {
+    /**
+     * Risk Score
+     */
+    risk_score: number;
+    /**
+     * Risk Level
+     */
+    risk_level: 'low' | 'medium' | 'high' | 'unknown';
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Recommended Action
+     */
+    recommended_action: string;
+    /**
+     * Findings
+     */
+    findings: Array<FindingResult>;
+    /**
+     * Submission Id
+     */
+    submission_id: string;
+    /**
+     * Report Id
+     */
+    report_id: string;
+    /**
+     * Model Version
+     */
+    model_version: string;
+    /**
+     * Ai Risk Score
+     */
+    ai_risk_score: number;
+    /**
+     * Ai Risk Level
+     */
+    ai_risk_level: 'low' | 'medium' | 'high' | 'unknown';
+    reputation: ReputationResult;
 };
 
 /**
@@ -341,6 +426,56 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type analysisCreateMessageAnalysisData = {
+    body: MessageAnalysisRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/analysis/message';
+};
+
+export type analysisCreateMessageAnalysisErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type analysisCreateMessageAnalysisError = analysisCreateMessageAnalysisErrors[keyof analysisCreateMessageAnalysisErrors];
+
+export type analysisCreateMessageAnalysisResponses = {
+    /**
+     * Successful Response
+     */
+    201: MessageAnalysisResponse;
+};
+
+export type analysisCreateMessageAnalysisResponse = analysisCreateMessageAnalysisResponses[keyof analysisCreateMessageAnalysisResponses];
+
+export type analysisCreateUrlAnalysisData = {
+    body: UrlAnalysisRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/analysis/url';
+};
+
+export type analysisCreateUrlAnalysisErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type analysisCreateUrlAnalysisError = analysisCreateUrlAnalysisErrors[keyof analysisCreateUrlAnalysisErrors];
+
+export type analysisCreateUrlAnalysisResponses = {
+    /**
+     * Successful Response
+     */
+    201: UrlAnalysisResponse;
+};
+
+export type analysisCreateUrlAnalysisResponse = analysisCreateUrlAnalysisResponses[keyof analysisCreateUrlAnalysisResponses];
 
 export type loginLoginAccessTokenData = {
     body: Body_login_login_access_token;
@@ -771,155 +906,6 @@ export type utilsHealthCheckResponses = {
 };
 
 export type utilsHealthCheckResponse = utilsHealthCheckResponses[keyof utilsHealthCheckResponses];
-
-export type itemsReadItemsData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Skip
-         */
-        skip?: number;
-        /**
-         * Limit
-         */
-        limit?: number;
-    };
-    url: '/api/v1/items/';
-};
-
-export type itemsReadItemsErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsReadItemsError = itemsReadItemsErrors[keyof itemsReadItemsErrors];
-
-export type itemsReadItemsResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemsPublic;
-};
-
-export type itemsReadItemsResponse = itemsReadItemsResponses[keyof itemsReadItemsResponses];
-
-export type itemsCreateItemData = {
-    body: ItemCreate;
-    path?: never;
-    query?: never;
-    url: '/api/v1/items/';
-};
-
-export type itemsCreateItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsCreateItemError = itemsCreateItemErrors[keyof itemsCreateItemErrors];
-
-export type itemsCreateItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsCreateItemResponse = itemsCreateItemResponses[keyof itemsCreateItemResponses];
-
-export type itemsDeleteItemData = {
-    body?: never;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsDeleteItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsDeleteItemError = itemsDeleteItemErrors[keyof itemsDeleteItemErrors];
-
-export type itemsDeleteItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: Message;
-};
-
-export type itemsDeleteItemResponse = itemsDeleteItemResponses[keyof itemsDeleteItemResponses];
-
-export type itemsReadItemData = {
-    body?: never;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsReadItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsReadItemError = itemsReadItemErrors[keyof itemsReadItemErrors];
-
-export type itemsReadItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsReadItemResponse = itemsReadItemResponses[keyof itemsReadItemResponses];
-
-export type itemsUpdateItemData = {
-    body: ItemUpdate;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsUpdateItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsUpdateItemError = itemsUpdateItemErrors[keyof itemsUpdateItemErrors];
-
-export type itemsUpdateItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;

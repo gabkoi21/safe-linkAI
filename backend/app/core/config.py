@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     # Optional separate key; otherwise try GOOGLE_API_KEY for Safe Browsing.
     GOOGLE_SAFE_BROWSING_API_KEY: SecretStr | None = None
     GOOGLE_SAFE_BROWSING_ACCESS_TOKEN: SecretStr | None = None
+    FILE_STORAGE_DIR: Path = Path(__file__).resolve().parents[2] / ".data" / "uploads"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

@@ -26,7 +26,7 @@ import SecurityReport, {
   type SecurityReportData,
 } from "@/components/Common/SecurityReport"
 import { useTheme } from "@/components/theme-provider"
-import { analyzeMessage, analyzeUrl } from "@/lib/messageAnalysis"
+import { analyzeFile, analyzeMessage, analyzeUrl } from "@/lib/messageAnalysis"
 import "./home.css"
 
 export const Route = createFileRoute("/_layout/")({
@@ -34,13 +34,6 @@ export const Route = createFileRoute("/_layout/")({
   head: () => ({ meta: [{ title: "SafeLink AI — Threat Analysis" }] }),
 })
 
-const submissions = [
-  "1d80e9061d11b4948c8d184f57457d479a0c9153",
-  "eb33dd701be7b73d6a335f0f1cf8b3c34a727a6",
-  "6af862eea03b4ac599b128e4deabffd6c02c8912",
-  "01a36e99ae8f6b4437af89a56f003026cae415b",
-  "214273fb1c10ccbb6ee25d4367e9eff497198a43",
-]
 const articles = [
   {
     category: "Platform updates",
@@ -78,6 +71,26 @@ function Dashboard() {
   const [files, setFiles] = useState<File[]>([])
   const [url, setUrl] = useState("")
   const [report, setReport] = useState<SecurityReportData | null>(null)
+  const [submissions, setSubmissions] = useState<
+    { report: SecurityReportData; completedAt: string }[]
+  >([])
+  const [showAllSubmissions, setShowAllSubmissions] = useState(false)
+  useEffect(() => {
+    if (!report) return
+    setSubmissions((current) =>
+      current.some(
+        (item) =>
+          item.report.analysis.submission_id === report.analysis.submission_id,
+      )
+        ? current
+        : [{ report, completedAt: new Date().toISOString() }, ...current],
+    )
+  }, [report])
+  const filteredSubmissions = submissions.filter(({ report: item }) =>
+    `${item.content} ${item.type} ${item.analysis.submission_id} ${item.analysis.risk_level}`
+      .toLowerCase()
+      .includes(query.trim().toLowerCase()),
+  )
   const [analyzing, setAnalyzing] = useState(false)
   const analysisInFlight = useRef(false)
   const [query, setQuery] = useState("")
@@ -117,9 +130,15 @@ function Dashboard() {
   function selectFiles(selected: File[]) {
     if (
       selected.length > 1 ||
-      selected.some((file) => file.size > 250 * 1024 * 1024)
+      selected.some((file) => file.size > 10 * 1024 * 1024)
     ) {
-      setMessage("Please choose one file up to 250 MB.")
+      setMessage("Please choose one file up to 10 MB.")
+      return
+    }
+    if (
+      selected.some((file) => !/\.(txt|pdf|docx|jpe?g|png)$/i.test(file.name))
+    ) {
+      setMessage("Choose a TXT, PDF, DOCX, JPG, JPEG, or PNG file.")
       return
     }
     setFiles(selected)
@@ -170,10 +189,25 @@ function Dashboard() {
       }
     }
     if (files[0]) {
-      setMessage("")
-      setMessage(
-        "File analysis is not available yet. Use Message to check text.",
-      )
+      const file = files[0]
+      analysisInFlight.current = true
+      setAnalyzing(true)
+      setReport(null)
+      setMessage("Reading file content and analyzing…")
+      try {
+        const analysis = await analyzeFile(file)
+        setReport({ type: "file", content: file.name, analysis })
+        setMessage("")
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "File analysis failed. Please try again.",
+        )
+      } finally {
+        analysisInFlight.current = false
+        setAnalyzing(false)
+      }
     }
   }
   const showInfo = (title: string, text: string) => setDialog({ title, text })
@@ -210,7 +244,7 @@ function Dashboard() {
         >
           <Search size={16} aria-hidden="true" />
           <input
-            aria-label="Search sample submissions"
+            aria-label="Search your submissions"
             placeholder="Search or enter hash…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -308,6 +342,8 @@ function Dashboard() {
                     <input
                       ref={input}
                       type="file"
+                      accept=".txt,.pdf,.docx,.jpg,.jpeg,.png"
+                      disabled={analyzing}
                       className="hidden"
                       aria-label="Choose a file"
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
@@ -340,21 +376,24 @@ function Dashboard() {
                             ? `${(files[0].size / 1024).toFixed(1)} KB · Click to choose another file`
                             : "or click to browse your files"}
                         </span>
-                        <small>
-                          Maximum upload size: 250 MB · Up to 1 file
-                        </small>
+                        <small>Maximum upload size: 10 MB · Up to 1 file</small>
                       </button>
                     </fieldset>
                     <p className="file-hint">
-                      Executables, documents, scripts — up to 250 MB
+                      TXT, PDF, DOCX, JPG, JPEG, PNG — up to 10 MB. Content
+                      review only; files are sent for analysis and stored
+                      privately.
                     </p>
                     {files.length > 0 && (
                       <button
                         type="button"
                         className="analyze-button"
                         onClick={preview}
+                        disabled={analyzing}
+                        aria-busy={analyzing}
                       >
-                        Analyze File <ArrowRight size={15} />
+                        {analyzing ? "Analyzing file…" : "Analyze File"}{" "}
+                        <ArrowRight size={15} />
                       </button>
                     )}
                   </>
@@ -424,7 +463,8 @@ function Dashboard() {
                       disabled={analyzing}
                       aria-busy={analyzing}
                     >
-                      <Rocket size={14} /> {analyzing ? "Analyzing URL…" : "Analyze URL"}
+                      <Rocket size={14} />{" "}
+                      {analyzing ? "Analyzing URL…" : "Analyze URL"}
                     </button>
                   </form>
                 )}
@@ -436,67 +476,92 @@ function Dashboard() {
               </div>
               <div className="submission-security">
                 <LockKeyhole size={12} /> Messages and URLs are sent to Google
-                services and saved privately. File analysis is coming next.
+                services and saved privately. Uploaded files are stored
+                privately; extracted text or image content is sent to Google AI.
               </div>
             </section>
             {!submitView && (
               <section className="community-panel" id="community">
                 <div className="panel-heading">
-                  <h2>Recent community submissions</h2>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      showInfo(
-                        "Community submissions",
-                        "These are sample submissions for the frontend preview. Live community submissions will be available when analysis services are connected.",
-                      )
-                    }
-                  >
-                    View submissions <ArrowRight size={12} />
-                  </button>
+                  <h2>Recent submissions</h2>
+                  {submissions.length > 5 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllSubmissions((value) => !value)}
+                    >
+                      {showAllSubmissions
+                        ? "Show recent"
+                        : "View all submissions"}{" "}
+                      <ArrowRight size={12} />
+                    </button>
+                  )}
                 </div>
                 <p className="panel-description">
-                  A preview of recently analyzed files shared with the
-                  community.
+                  Your completed message, URL, and file checks from this
+                  session.
                 </p>
                 <div className="submission-list">
-                  {submissions
-                    .filter((hash) => hash.includes(query.trim().toLowerCase()))
-                    .map((hash) => (
-                      <button
-                        type="button"
-                        className="submission-row"
-                        key={hash}
-                        onClick={() =>
-                          showInfo(
-                            "Sample analysis",
-                            `SHA sample: ${hash}. Verdict: Malicious. This is demonstration data, not a live analysis result.`,
-                          )
-                        }
-                      >
-                        <span className="file-icon">
-                          <FileText size={16} />
-                        </span>
-                        <span className="hash-info">
-                          <strong>{hash}</strong>
-                          <small>
-                            {hash.slice(0, 23)}…{" "}
-                            <span>· &nbsp;1 minute ago</span>
-                          </small>
-                        </span>
-                        <span className="malicious">Malicious</span>
-                        <ArrowRight size={14} className="row-arrow" />
-                      </button>
-                    ))}
-                  {!submissions.some((hash) =>
-                    hash.includes(query.trim().toLowerCase()),
-                  ) && (
+                  {filteredSubmissions
+                    .slice(0, showAllSubmissions ? undefined : 5)
+                    .map(({ report: item, completedAt }) => {
+                      const Icon =
+                        item.type === "message"
+                          ? MessageCircle
+                          : item.type === "url"
+                            ? LinkIcon
+                            : FileText
+                      return (
+                        <button
+                          type="button"
+                          className="submission-row"
+                          key={item.analysis.submission_id}
+                          onClick={() => setReport(item)}
+                        >
+                          <span className="file-icon">
+                            <Icon size={16} />
+                          </span>
+                          <span className="hash-info">
+                            <strong>
+                              {item.type === "message"
+                                ? "Message check"
+                                : item.content}
+                            </strong>
+                            <small>
+                              {item.analysis.submission_id}
+                              <span>
+                                {" "}
+                                ·{" "}
+                                <time dateTime={completedAt}>
+                                  {new Date(completedAt).toLocaleTimeString(
+                                    [],
+                                    { hour: "2-digit", minute: "2-digit" },
+                                  )}
+                                </time>
+                              </span>
+                            </small>
+                          </span>
+                          <span
+                            className={`submission-risk risk-${item.analysis.risk_level}`}
+                          >
+                            {item.analysis.risk_level === "unknown"
+                              ? "Unknown risk"
+                              : `${item.analysis.risk_level} risk`}
+                          </span>
+                          <ArrowRight size={14} className="row-arrow" />
+                        </button>
+                      )
+                    })}
+                  {!filteredSubmissions.length && (
                     <p className="no-results">
-                      No sample submissions match “{query}”.
+                      {submissions.length
+                        ? `No submissions match “${query}”.`
+                        : "No submissions yet. Check a message, URL, or file to see your results here."}
                     </p>
                   )}
                 </div>
-                <span className="sample-label">Sample data</span>
+                <span className="sample-label">
+                  Private to this session · History clears when you reload
+                </span>
               </section>
             )}
           </div>
@@ -592,8 +657,8 @@ function Dashboard() {
                 showInfo(
                   title,
                   title === "FAQ"
-                    ? "Messages and URLs use Gemma 4 through Google AI. URLs also request a Google Safe Browsing lookup; unavailable checks are labeled. Submissions and reports are saved privately. File analysis is not available yet."
-                    : `${title} content will be available when SafeLink AI launches. Messages and URLs submitted for analysis are sent to Google services and saved privately. Selected files remain on your device.`,
+                    ? "Messages, URLs, and supported files use Gemma 4. TXT, text-based PDF, and DOCX files are reviewed as extracted text; JPG and PNG images are reviewed visually. Files and reports are saved privately. This is not an antivirus scan. URLs also request a separate reputation lookup."
+                    : `${title} content will be available when SafeLink AI launches. Submitted messages, URLs, extracted document text, and image content are sent to Google services. Uploaded files and reports are stored privately.`,
                 )
               }
             >

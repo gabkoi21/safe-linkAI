@@ -110,7 +110,38 @@ The lookup sends the full URL to Google. Successful positive and negative checks
 are cached in a bounded per-process cache for the provider-specified duration.
 Secrets are sent in headers, never in query strings.
 
-### Backend development
+### File analysis
+
+`POST /api/v1/analysis/file` accepts multipart form data with one `file` field.
+Supported extensions are `.txt`, `.pdf`, `.docx`, `.jpg`, `.jpeg`, and `.png`.
+The maximum file size is 10 MB. Multipart bodies are bounded before parsing.
+TXT supports UTF-8 and BOM-marked UTF-16. PDF and DOCX content is extracted as
+text, with a 60,000-character limit. PDFs support at most 50 pages and must not
+be encrypted. Scanned/image-only PDFs should be submitted as JPG/PNG screenshots.
+Images are limited to 20 million pixels; decoded format must match the extension.
+
+Potentially malformed files are parsed in a separate process with a 15-second
+deadline. DOCX expansion and PDF decompression are bounded. Files are never
+executed. Image bytes are decoded and normalized before being sent to Gemma.
+Gemma returns the image transcription and analysis together; quoted findings
+are validated against that transcription. Visual transcription may contain
+errors. Extracted document text is reviewed through the shared Gemma text API.
+
+Original files are stored under `backend/.data/uploads`, outside the public
+frontend directory, using server-generated names. Override `FILE_STORAGE_DIR`
+to use another private directory. This folder is Git-ignored. Docker Compose
+mounts a persistent upload volume. Back up that storage along with PostgreSQL:
+Neon stores file metadata and analysis records, not the original file bytes.
+
+The response includes normal report fields plus `file` metadata and `extraction`
+details (method, reviewed text, page count where applicable, and limitations).
+The existing file/submission/report tables are used; no new migration is needed.
+Provider failures keep a failed report without a score. Invalid uploads are
+rejected before records or permanent files are created. Uploads from an initial
+database-write failure are removed. File checks review content, not malware,
+executable behavior, embedded attachments, or all hidden document content.
+
+### Development workflow
 
 Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter at `.venv/bin/python` in the project root.
 

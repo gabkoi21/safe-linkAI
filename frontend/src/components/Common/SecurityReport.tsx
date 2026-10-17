@@ -9,13 +9,18 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import type { MessageAnalysis, UrlAnalysis } from "@/lib/messageAnalysis"
+import type {
+  FileAnalysis,
+  MessageAnalysis,
+  UrlAnalysis,
+} from "@/lib/messageAnalysis"
 import "./security-report.css"
 
 export type ReportType = "message" | "url" | "file"
 export type SecurityReportData = { content: string } & (
   | { type: "message"; analysis: MessageAnalysis }
   | { type: "url"; analysis: UrlAnalysis }
+  | { type: "file"; analysis: FileAnalysis }
 )
 export default function SecurityReport({
   report,
@@ -38,6 +43,7 @@ export default function SecurityReport({
   const level = analysis.risk_level
   const urlAnalysis = report.type === "url" ? report.analysis : null
   const reputation = urlAnalysis?.reputation
+  const fileAnalysis = report.type === "file" ? report.analysis : null
   const assessment = {
     score: analysis.risk_score,
     level: level.charAt(0).toUpperCase() + level.slice(1),
@@ -49,7 +55,9 @@ export default function SecurityReport({
   async function copyReport() {
     const reputationText = reputation
       ? `\nGoogle Safe Browsing: ${reputation.status}\n${reputation.detail}\nThreat types: ${reputation.threat_types.join(", ") || "None reported"}\nChecked: ${reputation.checked_at ?? "Not checked"}\nGemma URL-pattern score: ${urlAnalysis?.ai_risk_score}/100\n`
-      : ""
+      : fileAnalysis
+        ? `\nFile SHA-256: ${fileAnalysis.file.sha256}\nReview method: ${fileAnalysis.extraction.method}\nLimitations: ${fileAnalysis.extraction.limitations.join(" ")}\n`
+        : ""
     const text = `SafeLink AI — Security Analysis Report\nType: ${active}\nContent: ${content}\nRisk indicator score: ${assessment.score}/100 (${assessment.level})\nAssessment; not a guarantee of safety.\n${assessment.summary}\n${reputationText}\nGemma warning signs:\n${analysis.findings.map(({ title, description }) => `${title}: ${description}`).join("\n")}\n\nRecommended safety action: ${assessment.action}`
     try {
       await navigator.clipboard.writeText(text)
@@ -143,9 +151,42 @@ export default function SecurityReport({
           <p className="report-disclaimer">
             {active === "url"
               ? "The website was not opened. Gemma reviews URL text only; the reputation result below is a separate lookup. This is not a guarantee of safety."
-              : "Based on the submitted message only. AI can make mistakes; this is not a guarantee of safety or independent verification of the sender."}
+              : active === "file"
+                ? "Based on extracted document text or visible image content only. This is not an antivirus scan or a guarantee that the file is safe to open."
+                : "Based on the submitted message only. AI can make mistakes; this is not a guarantee of safety or independent verification of the sender."}
           </p>
         </div>
+        {fileAnalysis && (
+          <section
+            className="report-warning-section"
+            aria-label="File review details"
+          >
+            <h3>File review details</h3>
+            <p>
+              {fileAnalysis.file.mime_type} ·{" "}
+              {(fileAnalysis.file.size_bytes / 1024).toFixed(1)} KB
+            </p>
+            <p>
+              Review method:{" "}
+              {fileAnalysis.extraction.method === "image_understanding"
+                ? "Gemma image understanding"
+                : "Extracted document text"}
+            </p>
+            {fileAnalysis.extraction.pages !== null && (
+              <p>PDF pages: {fileAnalysis.extraction.pages}</p>
+            )}
+            <p className="break-all">SHA-256: {fileAnalysis.file.sha256}</p>
+            {fileAnalysis.extraction.limitations.map((limitation) => (
+              <p key={limitation}>{limitation}</p>
+            ))}
+            <details>
+              <summary>Show content reviewed</summary>
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs">
+                {fileAnalysis.extraction.text}
+              </pre>
+            </details>
+          </section>
+        )}
         <section className="report-warning-section">
           {reputation && (
             <section aria-label="URL reputation">

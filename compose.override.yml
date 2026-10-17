@@ -50,6 +50,7 @@ services:
           target: /app/backend
           ignore:
             - .venv
+            - .data
         - path: ./backend/pyproject.toml
           action: rebuild
         - path: ./frontend

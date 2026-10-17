@@ -6,6 +6,7 @@ frontend/.env
 frontend/.env.*
 !.vscode/extensions.json
 node_modules/
+backend/.data/
 backend/app/frontend/
 /test-results/
 /playwright-report/

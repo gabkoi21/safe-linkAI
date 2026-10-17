@@ -125,7 +125,7 @@ class ProviderTests(unittest.TestCase):
     def test_sdk_receives_configured_model_and_untrusted_message(self):
         with (
             patch.object(settings, "GOOGLE_API_KEY", SecretStr("test-only")),
-            patch("app.analysis.genai.Client") as client,
+            patch("app.gemma.genai.Client") as client,
         ):
             generate = (
                 client.return_value.__enter__.return_value.models.generate_content
@@ -148,7 +148,7 @@ class ProviderTests(unittest.TestCase):
     def test_missing_key_never_calls_sdk(self):
         with (
             patch.object(settings, "GOOGLE_API_KEY", None),
-            patch("app.analysis.genai.Client") as client,
+            patch("app.gemma.genai.Client") as client,
             self.assertRaises(AnalysisError) as error,
         ):
             analyze_message(MESSAGE)
@@ -167,7 +167,7 @@ class ProviderTests(unittest.TestCase):
             with (
                 self.subTest(status=status),
                 patch.object(settings, "GOOGLE_API_KEY", SecretStr("test-only")),
-                patch("app.analysis.genai.Client") as client,
+                patch("app.gemma.genai.Client") as client,
             ):
                 client.return_value.__enter__.return_value.models.generate_content.side_effect = failure
                 with self.assertRaises(AnalysisError) as error:

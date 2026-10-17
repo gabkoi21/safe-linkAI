@@ -48,6 +48,8 @@ services:
 
   backend:
     image: backend:latest
+    volumes:
+      - backend-upload-data:/app/backend/.data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -90,3 +92,4 @@ services:
 
 volumes:
   app-db-data:
+  backend-upload-data:
