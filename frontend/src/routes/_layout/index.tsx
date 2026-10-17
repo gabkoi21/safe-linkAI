@@ -1,4 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router"
 import {
   ArrowRight,
   Check,
@@ -88,17 +93,12 @@ function Dashboard() {
     else reviewDialog.current?.close()
   }, [reviewUrl])
   const [query, setQuery] = useState("")
-  const [submitView, setSubmitView] = useState(
-    () => window.location.hash === "#submit",
-  )
+  const hash = useLocation({ select: (location) => location.hash })
+  const navigate = useNavigate()
+  const submitView = hash === "submit"
   useEffect(() => {
-    const updateView = () => {
-      setSubmitView(window.location.hash === "#submit")
-      window.scrollTo(0, 0)
-    }
-    window.addEventListener("hashchange", updateView)
-    return () => window.removeEventListener("hashchange", updateView)
-  }, [])
+    if (hash === "submit" || hash === "home" || !hash) window.scrollTo(0, 0)
+  }, [hash])
   const [message, setMessage] = useState("")
   const [dragging, setDragging] = useState(false)
   const [dialog, setDialog] = useState<{ title: string; text: string } | null>(
@@ -152,23 +152,32 @@ function Dashboard() {
   return (
     <div className={`threat-home ${submitView ? "submit-view" : ""}`}>
       <header className="threat-header">
-        <a className="threat-brand" href="/" aria-label="SafeLink AI home">
+        <Link
+          className="threat-brand"
+          to="/"
+          hash="home"
+          aria-label="SafeLink AI home"
+        >
           <span className="brand-wordmark">
             Safe<span className="brand-link">Link</span>
             <span className="brand-ai">AI</span>
           </span>
-        </a>
+        </Link>
         <nav className="primary-nav" aria-label="Main navigation">
-          <a href="#submit" aria-current={submitView ? "page" : undefined}>
-            Submit
-          </a>
+          <Link
+            to="/"
+            hash="submit"
+            aria-current={submitView ? "page" : undefined}
+          >
+            Check Quick
+          </Link>
         </nav>
         <form
           className="header-search"
           aria-label="Search submissions"
           onSubmit={(event) => {
             event.preventDefault()
-            window.location.hash = "community"
+            void navigate({ to: "/", hash: "community" })
           }}
         >
           <Search size={16} aria-hidden="true" />
@@ -180,28 +189,8 @@ function Dashboard() {
           />
         </form>
         <nav className="account-nav" aria-label="Resources and account">
-          <button
-            type="button"
-            onClick={() =>
-              showInfo(
-                "Login",
-                "Account access will be connected in a future release. This preview is available without signing in.",
-              )
-            }
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              showInfo(
-                "Sign up",
-                "Registration will be available when account services are connected.",
-              )
-            }
-          >
-            Sign Up
-          </button>
+          <Link to="/login">Login</Link>
+          <Link to="/signup">Sign Up</Link>
           <button
             type="button"
             className="settings-button"
@@ -221,8 +210,8 @@ function Dashboard() {
             <div className="submit-intro">
               <h1>Let's check it quick quick!</h1>
               <p>
-                You get a message, link, or file you're not sure about? Drop it here,
-                and let SafeLink AI help you check for bad things.
+                You get a message, link, or file you're not sure about? Drop it
+                here, and let SafeLink AI help you check for bad things.
               </p>
             </div>
           ) : (
@@ -231,11 +220,12 @@ function Dashboard() {
                 <span /> Built for a safer digital world
               </span>
               <h1>
-                You see something looking funny? <em>Let's check it quick quick!</em>
+                You see something looking funny?{" "}
+                <em>Let's check it quick quick!</em>
               </h1>
               <p>
-                You get a message, link, or file you're not sure about? Drop it here,
-                and let SafeLink AI help you check for bad things
+                You get a message, link, or file you're not sure about? Drop it
+                here, and let SafeLink AI help you check for bad things
               </p>
             </div>
           )}
@@ -733,5 +723,3 @@ function Dashboard() {
     </div>
   )
 }
-
-
