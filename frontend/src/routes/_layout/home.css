@@ -54,12 +54,6 @@
   background: #36c5f00d;
   line-height: 1;
 }
-.brand-symbol {
-  width: 32px;
-  height: 36px;
-  flex-shrink: 0;
-  color: #25b8e6;
-}
 .brand-wordmark {
   display: inline-flex;
   align-items: center;

@@ -17,6 +17,9 @@ import {
 } from "lucide-react"
 import type { ChangeEvent, DragEvent } from "react"
 import { useEffect, useRef, useState } from "react"
+import SecurityReport, {
+  type ReportType,
+} from "@/components/Common/SecurityReport"
 import { useTheme } from "@/components/theme-provider"
 import "./home.css"
 
@@ -68,6 +71,10 @@ function Dashboard() {
   const [messageText, setMessageText] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [url, setUrl] = useState("")
+  const [report, setReport] = useState<{
+    type: ReportType
+    content: string
+  } | null>(null)
   const [reviewUrl, setReviewUrl] = useState<string | null>(null)
   const reviewDialog = useRef<HTMLDialogElement>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -120,9 +127,8 @@ function Dashboard() {
         setMessage("Paste a message to prepare it for analysis.")
         return
       }
-      setMessage(
-        "Message ready for analysis. This frontend preview does not send or scan your message.",
-      )
+      setMessage("")
+      setReport({ type: "message", content: messageText.trim() })
       return
     }
     if (tab === "url") {
@@ -137,46 +143,16 @@ function Dashboard() {
         return
       }
     }
-    setMessage(
-      "Ready for analysis. This frontend preview does not upload files or scan URLs.",
-    )
+    if (files[0]) {
+      setMessage("")
+      setReport({ type: "file", content: files[0].name })
+    }
   }
   const showInfo = (title: string, text: string) => setDialog({ title, text })
   return (
     <div className={`threat-home ${submitView ? "submit-view" : ""}`}>
       <header className="threat-header">
         <a className="threat-brand" href="/" aria-label="SafeLink AI home">
-          <svg
-            className="brand-symbol"
-            viewBox="0 0 40 44"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M20 2 36 8v13c0 10-9 17-16 21C13 38 4 31 4 21V8L20 2Z"
-              fill="currentColor"
-              fillOpacity=".1"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinejoin="round"
-            />
-            <g
-              stroke="currentColor"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path
-                d="m17 25-2 2a5 5 0 0 1-7-7l5-5a5 5 0 0 1 7 0"
-                transform="translate(4 0)"
-              />
-              <path
-                d="m23 19 2-2a5 5 0 0 1 7 7l-5 5a5 5 0 0 1-7 0"
-                transform="translate(-4 0)"
-              />
-              <path d="m16 26 8-8" />
-            </g>
-          </svg>
           <span className="brand-wordmark">
             Safe<span className="brand-link">Link</span>
             <span className="brand-ai">AI</span>
@@ -243,10 +219,10 @@ function Dashboard() {
         <section className="threat-hero">
           {submitView ? (
             <div className="submit-intro">
-              <h1>Submit for Analysis</h1>
+              <h1>Let's check it quick quick!</h1>
               <p>
-                Submit messages, URLs, or files for analysis and view your
-                recent submissions
+                You get a message, link, or file you're not sure about? Drop it here,
+                and let SafeLink AI help you check for bad things.
               </p>
             </div>
           ) : (
@@ -255,13 +231,11 @@ function Dashboard() {
                 <span /> Built for a safer digital world
               </span>
               <h1>
-                Detect and analyze <em>unknown threats</em> in seconds.
+                You see something looking funny? <em>Let's check it quick quick!</em>
               </h1>
               <p>
-                Upload a suspicious file or paste a URL — investigate potential
-                threats,
-                <br className="desktop-break" /> uncover insights, and make your
-                next move with confidence.
+                You get a message, link, or file you're not sure about? Drop it here,
+                and let SafeLink AI help you check for bad things
               </p>
             </div>
           )}
@@ -362,7 +336,7 @@ function Dashboard() {
                         className="analyze-button"
                         onClick={preview}
                       >
-                        Prepare analysis <ArrowRight size={15} />
+                        Analyze File <ArrowRight size={15} />
                       </button>
                     )}
                   </>
@@ -672,10 +646,7 @@ function Dashboard() {
             className="analyze-button review-analyze"
             onClick={() => {
               setReviewUrl(null)
-              showInfo(
-                "Analysis preview",
-                "Quick Scan selected. Your URL is ready for analysis. Scanning will be available when analysis services are connected.",
-              )
+              setReport({ type: "url", content: reviewUrl ?? url })
             }}
           >
             Analyze
@@ -724,6 +695,7 @@ function Dashboard() {
           </button>
         </footer>
       </dialog>
+      <SecurityReport report={report} onClose={() => setReport(null)} />
       {dialog && (
         <div className="info-overlay">
           <section
@@ -761,3 +733,5 @@ function Dashboard() {
     </div>
   )
 }
+
+
