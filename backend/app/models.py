@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import EmailStr
-from sqlalchemy import CheckConstraint, DateTime, Text
+from sqlalchemy import JSON, CheckConstraint, DateTime, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -157,6 +157,8 @@ class AnalysisReport(SQLModel, table=True):
     recommended_action: str | None = Field(default=None, sa_type=Text)
     model_version: str | None = Field(default=None, max_length=255)
     error_message: str | None = Field(default=None, sa_type=Text)
+    # Provider provenance and URL reputation results, separate from AI findings.
+    analysis_details: dict | None = Field(default=None, sa_type=JSON)
     created_at: datetime = Field(
         default_factory=get_datetime_utc, sa_type=DateTime(timezone=True), index=True
     )

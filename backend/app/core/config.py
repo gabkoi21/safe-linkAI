@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # Backend only. Never expose provider credentials through VITE_* variables.
     GOOGLE_API_KEY: SecretStr | None = None
     GOOGLE_AI_MODEL: str = "gemma-4-26b-a4b-it"
+    # Optional separate key; otherwise try GOOGLE_API_KEY for Safe Browsing.
+    GOOGLE_SAFE_BROWSING_API_KEY: SecretStr | None = None
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

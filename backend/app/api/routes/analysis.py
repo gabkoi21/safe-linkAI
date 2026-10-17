@@ -5,7 +5,9 @@ from app.analysis import (
     AnalysisError,
     MessageAnalysisRequest,
     MessageAnalysisResponse,
+    MessageAnalysisResult,
     analyze_message,
+    analyze_url_patterns,
 )
 from app.api.deps import SessionDep
 from app.core.config import settings
@@ -18,6 +20,11 @@ from app.models import (
     SubmissionType,
     get_datetime_utc,
 )
+from app.url_analysis import (
+    UrlAnalysisRequest,
+    UrlAnalysisResponse,
+    check_url_reputation,
+)
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -26,8 +33,49 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 def create_message_analysis(
     body: MessageAnalysisRequest, session: SessionDep
 ) -> MessageAnalysisResponse:
+    return _create_analysis(
+        Submission(type=SubmissionType.MESSAGE, message_text=body.message),
+        session,
+        lambda: analyze_message(body.message),
+    )
+
+
+@router.post("/url", response_model=UrlAnalysisResponse, status_code=201)
+def create_url_analysis(
+    body: UrlAnalysisRequest, session: SessionDep
+) -> UrlAnalysisResponse:
+    url = str(body.url)
+    details: dict = {}
+
+    def analyze() -> MessageAnalysisResult:
+        ai = analyze_url_patterns(url)
+        reputation = check_url_reputation(url)
+        details.update(
+            ai_risk_score=ai.risk_score,
+            ai_risk_level=ai.risk_level,
+            reputation=reputation.model_dump(mode="json"),
+        )
+        # A known threat must not be displayed as low risk because its URL
+        # looks ordinary. Keep Gemma's original assessment separately.
+        if reputation.status == "matched":
+            return ai.model_copy(
+                update={"risk_score": max(90, ai.risk_score), "risk_level": "high"}
+            )
+        return ai
+
+    response = _create_analysis(
+        Submission(type=SubmissionType.URL, url=url), session, analyze, details
+    )
+    return UrlAnalysisResponse(**response.model_dump(), **details)
+
+
+def _create_analysis(
+    submission: Submission,
+    session: SessionDep,
+    analyze: Callable[[], MessageAnalysisResult],
+    details: dict | None = None,
+) -> MessageAnalysisResponse:
     # Guest submissions are private and have no account owner.
-    submission = Submission(type=SubmissionType.MESSAGE, message_text=body.message)
     report = AnalysisReport(
         submission=submission,
         status=AnalysisStatus.PROCESSING,
@@ -40,7 +88,7 @@ def create_message_analysis(
         submission_id, report_id = submission.id, report.id
         session.commit()
         try:
-            result = analyze_message(body.message)
+            result = analyze()
         except AnalysisError as exc:
             report.status = AnalysisStatus.FAILED
             report.error_message = str(exc)
@@ -50,6 +98,7 @@ def create_message_analysis(
             raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
         report.risk_score = result.risk_score
+        report.analysis_details = details or None
         report.risk_level = RiskLevel(result.risk_level)
         report.summary = result.summary
         report.recommended_action = result.recommended_action
@@ -79,3 +128,6 @@ def create_message_analysis(
         report_id=report_id,
         model_version=settings.GOOGLE_AI_MODEL,
     )
+
+
+from collections.abc import Callable
