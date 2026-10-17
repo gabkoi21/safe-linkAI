@@ -21,6 +21,12 @@
 .security-report.medium-risk {
   --report-risk: #d5a727;
 }
+.security-report.low-risk {
+  --report-risk: #4bc390;
+}
+.security-report.unknown-risk {
+  --report-risk: #9cabb9;
+}
 .report-header {
   display: flex;
   align-items: center;

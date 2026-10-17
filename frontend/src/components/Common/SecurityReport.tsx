@@ -9,96 +9,44 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import type { MessageAnalysis } from "@/lib/messageAnalysis"
 import "./security-report.css"
 
 export type ReportType = "message" | "url" | "file"
-const examples = {
-  message: {
-    score: 85,
-    level: "High",
-    summary:
-      "This example shows several common phishing indicators, including urgency and a request for sensitive information.",
-    warnings: [
-      ["Urgency detected", "The sender pressures you to act immediately."],
-      [
-        "Credential request",
-        "The message asks you to provide an OTP or password.",
-      ],
-      [
-        "Impersonation",
-        "The sender claims to represent a financial institution.",
-      ],
-    ],
-    action:
-      "Do not share your OTP. Contact the bank using its official website or phone number.",
-    content: "Suspicious bank verification message",
-  },
-  url: {
-    score: 60,
-    level: "Medium",
-    summary:
-      "The example URL structure resembles an account verification page, but there is insufficient evidence to establish whether it is malicious.",
-    warnings: [
-      [
-        "Account verification path",
-        "The example URL contains a login or verification-related path.",
-      ],
-      [
-        "Sender not verified",
-        "No independent domain ownership or reputation check has been performed.",
-      ],
-    ],
-    action:
-      "Do not enter credentials. Visit the service through its known official website instead.",
-    content: "https://secure-bank.login.example/verify",
-  },
-  file: {
-    score: 80,
-    level: "High",
-    summary:
-      "The example document contains suspicious payment instructions and pressure to act urgently.",
-    warnings: [
-      [
-        "Payment request",
-        "The document requests payment to an unfamiliar account.",
-      ],
-      [
-        "Urgent instructions",
-        "The recipient is pressured to complete the payment immediately.",
-      ],
-      [
-        "Unverified identity",
-        "The claimed organization’s identity has not been confirmed.",
-      ],
-    ],
-    action:
-      "Verify the invoice using an established contact method before sending any money.",
-    content: "Payment_Notice.pdf",
-  },
+export interface SecurityReportData {
+  type: "message"
+  content: string
+  analysis: MessageAnalysis
 }
 export default function SecurityReport({
   report,
   onClose,
 }: {
-  report: { type: ReportType; content: string } | null
+  report: SecurityReportData | null
   onClose: () => void
 }) {
   const modal = useRef<HTMLDialogElement>(null)
-  const [active, setActive] = useState<ReportType>("message")
   const [copyStatus, setCopyStatus] = useState("")
   useEffect(() => {
     if (report) {
-      setActive(report.type)
       setCopyStatus("")
       modal.current?.showModal()
     } else modal.current?.close()
   }, [report])
-  const example = examples[active]
-  const content = active === report?.type ? report.content : example.content
+  if (!report) return null
+  const active = report.type
+  const { analysis, content } = report
+  const level = analysis.risk_level
+  const assessment = {
+    score: analysis.risk_score,
+    level: level.charAt(0).toUpperCase() + level.slice(1),
+    summary: analysis.summary,
+    action: analysis.recommended_action,
+  }
   const Icon =
     active === "message" ? MessageCircle : active === "url" ? Link : FileText
   async function copyReport() {
-    const text = `SafeLink AI — Demo Security Analysis Report\nType: ${active}\nContent: ${content}\nIllustrative risk score: ${example.score}/100 (${example.level})\nDemo data only. Submitted content has not been analyzed.\n${example.summary}\n\nExample warning signs:\n${example.warnings.map(([title, description]) => `${title}: ${description}`).join("\n")}\n\nRecommended safety action: ${example.action}`
+    const text = `SafeLink AI — Security Analysis Report\nType: ${active}\nContent: ${content}\nAI risk indicator score: ${assessment.score}/100 (${assessment.level})\nAI assessment; not a guarantee of safety.\n${assessment.summary}\n\nWarning signs:\n${analysis.findings.map(({ title, description }) => `${title}: ${description}`).join("\n")}\n\nRecommended safety action: ${assessment.action}`
     try {
       await navigator.clipboard.writeText(text)
       setCopyStatus("Report copied")
@@ -110,7 +58,7 @@ export default function SecurityReport({
   }
   return (
     <dialog
-      className={`security-report ${active === "url" ? "medium-risk" : "high-risk"}`}
+      className={`security-report ${level}-risk`}
       ref={modal}
       onCancel={onClose}
       onClose={onClose}
@@ -122,7 +70,7 @@ export default function SecurityReport({
           <h2 id="security-report-title">SafeLink AI</h2>
           <p>Security Analysis Report</p>
         </div>
-        <span className="report-demo">Demo</span>
+        <span className="report-demo">Gemma 4</span>
         <button
           type="button"
           className="report-close"
@@ -161,11 +109,11 @@ export default function SecurityReport({
           </p>
         </div>
         <div className="report-risk">
-          <span className="risk-label">{example.level} risk indicators</span>
+          <span className="risk-label">{assessment.level} risk indicators</span>
           <div
             className="risk-gauge"
             role="img"
-            aria-label={`Illustrative risk score ${example.score} out of 100`}
+            aria-label={`AI risk indicator score ${assessment.score} out of 100`}
           >
             <svg viewBox="0 0 200 115" aria-hidden="true">
               <path className="gauge-track" d="M15 100 A85 85 0 0 1 185 100" />
@@ -173,45 +121,54 @@ export default function SecurityReport({
                 className="gauge-value"
                 d="M15 100 A85 85 0 0 1 185 100"
                 pathLength="100"
-                strokeDasharray={`${example.score} 100`}
+                strokeDasharray={`${assessment.score} 100`}
               />
             </svg>
             <div className="gauge-number">
-              <strong>{example.score}</strong>
+              <strong>{assessment.score}</strong>
               <span>/ 100</span>
             </div>
           </div>
           <p className="risk-caption">
-            Illustrative AI risk score — not a malware detection probability
+            AI risk indicator score — not a malware detection probability
           </p>
-          <p className="risk-summary">{example.summary}</p>
+          <p className="risk-summary">{assessment.summary}</p>
           <p className="report-disclaimer">
-            Demo data only. Your submitted content has not been analyzed.
-            Warning signs below are examples.
+            Based on the submitted message only. AI can make mistakes; this is
+            not a guarantee of safety or independent verification of the sender.
           </p>
         </div>
         <section className="report-warning-section">
           <h3>
             <AlertTriangle size={16} /> Detected warning signs{" "}
-            <span className="report-example-label">Example</span>
           </h3>
+          {analysis.findings.length === 0 && (
+            <p>No specific warning signs identified.</p>
+          )}
           <ul>
-            {example.warnings.map(([title, description]) => (
-              <li key={title}>
-                <AlertTriangle size={14} />
-                <div>
-                  <h4>{title}</h4>
-                  <p>{description}</p>
-                </div>
-              </li>
-            ))}
+            {analysis.findings.map(
+              ({ title, description, evidence }, index) => (
+                <li key={`${title}-${index}`}>
+                  <AlertTriangle size={14} />
+                  <div>
+                    <h4>{title}</h4>
+                    <p>{description}</p>
+                    {evidence && (
+                      <p>
+                        Evidence: <q>{evidence}</q>
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
         </section>
         <section className="report-safety">
           <h3>
             <ShieldCheck size={17} /> Recommended safety action
           </h3>
-          <p>{example.action}</p>
+          <p>{assessment.action}</p>
         </section>
       </section>
       <button type="button" className="copy-report" onClick={copyReport}>

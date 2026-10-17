@@ -17,6 +17,13 @@ bun run dev
 
 Then open <http://localhost:5173/> in your browser.
 
+The Message tab calls `POST /api/v1/analysis/message` and displays the real Gemma
+report saved by the backend. Start the backend on port 8000 and configure its
+Google API key and database first. Vite proxies `/api` to that backend when
+`VITE_API_URL` is unset; a configured `VITE_API_URL` overrides this. Messages are
+sent to Google AI and stored privately. Failures show an error, without a sample
+report. URL and file checks are not connected yet.
+
 Run `uv run bash scripts/prestart.sh` and `uv run fastapi dev` from the `backend` directory, with PostgreSQL running in Docker Compose. See [../development.md](../development.md) for the complete setup.
 
 To serve the frontend with FastAPI, run `bun run build` from the `frontend` directory and open `http://localhost:8000`.

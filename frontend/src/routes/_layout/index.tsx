@@ -23,9 +23,10 @@ import {
 import type { ChangeEvent, DragEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import SecurityReport, {
-  type ReportType,
+  type SecurityReportData,
 } from "@/components/Common/SecurityReport"
 import { useTheme } from "@/components/theme-provider"
+import { analyzeMessage } from "@/lib/messageAnalysis"
 import "./home.css"
 
 export const Route = createFileRoute("/_layout/")({
@@ -76,10 +77,9 @@ function Dashboard() {
   const [messageText, setMessageText] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [url, setUrl] = useState("")
-  const [report, setReport] = useState<{
-    type: ReportType
-    content: string
-  } | null>(null)
+  const [report, setReport] = useState<SecurityReportData | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const analysisInFlight = useRef(false)
   const [reviewUrl, setReviewUrl] = useState<string | null>(null)
   const reviewDialog = useRef<HTMLDialogElement>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -121,14 +121,31 @@ function Dashboard() {
     setDragging(false)
     selectFiles(Array.from(event.dataTransfer.files))
   }
-  function preview() {
+  async function preview() {
+    if (analysisInFlight.current) return
     if (tab === "message") {
       if (!messageText.trim()) {
         setMessage("Paste a message to prepare it for analysis.")
         return
       }
+      const content = messageText.trim()
+      analysisInFlight.current = true
+      setAnalyzing(true)
       setMessage("")
-      setReport({ type: "message", content: messageText.trim() })
+      setReport(null)
+      try {
+        const analysis = await analyzeMessage(content)
+        setReport({ type: "message", content, analysis })
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Analysis failed. Please try again.",
+        )
+      } finally {
+        analysisInFlight.current = false
+        setAnalyzing(false)
+      }
       return
     }
     if (tab === "url") {
@@ -145,7 +162,9 @@ function Dashboard() {
     }
     if (files[0]) {
       setMessage("")
-      setReport({ type: "file", content: files[0].name })
+      setMessage(
+        "File analysis is not available yet. Use Message to check text.",
+      )
     }
   }
   const showInfo = (title: string, text: string) => setDialog({ title, text })
@@ -341,20 +360,28 @@ function Dashboard() {
                     <MessageCircle size={30} />
                     <h2>Check a Suspicious Message</h2>
                     <p>
-                      Paste an email, SMS, or chat message to prepare it for
-                      review.
+                      Paste an email, SMS, or chat message for Gemma 4 analysis.
+                      Submitted text is sent to Google AI and saved privately.
                     </p>
                     <textarea
                       aria-label="Message to analyze"
                       placeholder="Paste the suspicious message here…"
                       value={messageText}
+                      maxLength={20000}
+                      disabled={analyzing}
                       onChange={(event) => {
                         setMessageText(event.target.value)
                         setMessage("")
                       }}
                     />
-                    <button type="submit" className="analyze-button">
-                      <Rocket size={14} /> Analyze Message
+                    <button
+                      type="submit"
+                      className="analyze-button"
+                      disabled={analyzing}
+                      aria-busy={analyzing}
+                    >
+                      <Rocket size={14} />{" "}
+                      {analyzing ? "Analyzing message…" : "Analyze Message"}
                     </button>
                   </form>
                 ) : (
@@ -394,8 +421,8 @@ function Dashboard() {
                 )}
               </div>
               <div className="submission-security">
-                <LockKeyhole size={12} /> Frontend preview · Your inputs stay on
-                your device
+                <LockKeyhole size={12} /> Messages are analyzed by Google AI and
+                saved privately. URL and file analysis are coming next.
               </div>
             </section>
             {!submitView && (
@@ -551,8 +578,8 @@ function Dashboard() {
                 showInfo(
                   title,
                   title === "FAQ"
-                    ? "Can I scan files here? This is a frontend preview. Selected files remain on your device and URLs are validated locally. No analysis requests are sent."
-                    : `${title} content will be available when SafeLink AI launches. This preview does not send your files or entered URLs to a server.`,
+                    ? "Message analysis uses Gemma 4 through Google AI. Submitted messages and reports are saved privately. URL and file analysis are not available yet."
+                    : `${title} content will be available when SafeLink AI launches. Messages submitted for analysis are sent to Google AI and saved privately. Files and URLs remain on your device.`,
                 )
               }
             >
@@ -636,7 +663,9 @@ function Dashboard() {
             className="analyze-button review-analyze"
             onClick={() => {
               setReviewUrl(null)
-              setReport({ type: "url", content: reviewUrl ?? url })
+              setMessage(
+                "URL analysis is not available yet. Use Message to check text.",
+              )
             }}
           >
             Analyze

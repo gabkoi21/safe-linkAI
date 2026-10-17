@@ -49,6 +49,35 @@ The API docs and health check work without PostgreSQL. Login and data operations
 require the database and migrations described above. Stop an existing backend
 before starting another server on port 8000.
 
+## SafeLink message analysis
+
+Set `GOOGLE_API_KEY` in the root `.env`. `GOOGLE_AI_MODEL` defaults to
+`gemma-4-26b-a4b-it`. Install dependencies after pulling changes (`uv sync`, or
+`python -m pip install -e .` inside the activated backend environment), apply
+`alembic upgrade head`, and start the backend. No new migration is required for
+message analysis; it uses the existing SafeLink tables.
+
+`POST /api/v1/analysis/message` accepts `{"message": "Text to check"}` (1–20,000
+characters). It returns HTTP 201 with `submission_id`, `report_id`, `model_version`,
+`risk_score`, `risk_level`, `summary`, `recommended_action`, and `findings`.
+Findings contain `title`, `description`, `severity`, and optional quoted `evidence`.
+
+The endpoint currently supports guests. Submissions are saved privately without
+an account owner. Message text is sent to Google AI and stored in PostgreSQL with
+its report. The API key stays on the backend. Reports assess message content;
+they do not verify identities, fetch links, or guarantee safety.
+
+Provider failures create a failed report without a risk score. Invalid model
+output is rejected. Errors return a readable `detail` with HTTP 429 (quota),
+502 (provider/invalid output), 503 (configuration/database), or 504 (timeout).
+No generated example is substituted. URL and file analysis remain unavailable.
+
+Run isolated tests without connecting to Google or PostgreSQL:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s unit_tests -v
+```
+
 ## General Workflow
 
 Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter at `.venv/bin/python` in the project root.
