@@ -79,7 +79,11 @@ VITE_API_URL=https://my-domain.example.com
 
 Then, when you run the frontend, it will use that URL as the base URL for the API.
 
-## Code Structure
+## SafeLink AI implementation phases
+
+See the [phase roadmap](../docs/phases/README.md) for the current frontend baseline, implementation sequence, and a separate Markdown checklist for each phase.
+
+## Source directories
 
 The frontend code is structured as follows:
 

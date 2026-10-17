@@ -16,7 +16,6 @@ export default function AccountPreview({ mode }: { mode: "login" | "signup" }) {
       mode === "login" &&
       Boolean(localStorage.getItem("safelink-remembered-email")),
   )
-  const [name, setName] = useState("")
   const [fullName, setFullName] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -95,21 +94,6 @@ export default function AccountPreview({ mode }: { mode: "login" | "signup" }) {
           {signup && (
             <>
               <h2>Account Information</h2>
-              <label className="account-field">
-                {" "}
-                <span>
-                  Name<span className="account-required">*</span>
-                </span>
-                <input
-                  name="username"
-                  autoComplete="username"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={50}
-                  required
-                />
-                <small>{name.length}/50</small>
-              </label>
               <label className="account-field">
                 <span>Full Name</span>
                 <input

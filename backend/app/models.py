@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import EmailStr
+from sqlalchemy import CheckConstraint, DateTime, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -52,7 +54,9 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
-    items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
+    submissions: list[Submission] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required
@@ -66,43 +70,115 @@ class UsersPublic(SQLModel):
     count: int
 
 
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+class SubmissionType(StrEnum):
+    MESSAGE = "message"
+    URL = "url"
+    FILE = "file"
 
 
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
+class SubmissionVisibility(StrEnum):
+    PRIVATE = "private"
+    PUBLIC = "public"
 
 
-# Properties to receive on item update
-class ItemUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+class AnalysisStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
+class RiskLevel(StrEnum):
+    UNKNOWN = "unknown"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class Submission(SQLModel, table=True):
+    __tablename__ = "submission"
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(default_factory=get_datetime_utc)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    # Guest submissions do not have an account owner.
+    user_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", index=True, ondelete="CASCADE"
     )
-    owner: User | None = Relationship(back_populates="items")
+    type: SubmissionType = Field(index=True)
+    message_text: str | None = Field(default=None, sa_type=Text)
+    url: str | None = Field(default=None, sa_type=Text)
+    visibility: SubmissionVisibility = Field(default=SubmissionVisibility.PRIVATE)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc, sa_type=DateTime(timezone=True), index=True
+    )
+    user: User | None = Relationship(back_populates="submissions")
+    files: list[File] = Relationship(back_populates="submission", cascade_delete=True)
+    reports: list[AnalysisReport] = Relationship(
+        back_populates="submission", cascade_delete=True
+    )
 
 
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID
-    created_at: datetime | None = None
+class File(SQLModel, table=True):
+    __tablename__ = "file"
+    __table_args__ = (CheckConstraint("size_bytes >= 0", name="file_size_nonnegative"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    submission_id: uuid.UUID = Field(
+        foreign_key="submission.id", index=True, ondelete="CASCADE"
+    )
+    original_name: str = Field(max_length=255)
+    # Store uploaded bytes outside the database; this identifies their location.
+    storage_key: str = Field(sa_type=Text)
+    mime_type: str = Field(max_length=255)
+    size_bytes: int = Field(ge=0)
+    sha256: str = Field(min_length=64, max_length=64, index=True)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc, sa_type=DateTime(timezone=True)
+    )
+    submission: Submission = Relationship(back_populates="files")
 
 
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
-    count: int
+class AnalysisReport(SQLModel, table=True):
+    __tablename__ = "analysis_report"
+    __table_args__ = (
+        CheckConstraint(
+            "risk_score >= 0 AND risk_score <= 100", name="report_risk_score_range"
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    submission_id: uuid.UUID = Field(
+        foreign_key="submission.id", index=True, ondelete="CASCADE"
+    )
+    status: AnalysisStatus = Field(default=AnalysisStatus.PENDING, index=True)
+    # Pending/failed analysis must not look like a completed low-risk result.
+    risk_score: int | None = Field(default=None, ge=0, le=100)
+    risk_level: RiskLevel = Field(default=RiskLevel.UNKNOWN)
+    summary: str | None = Field(default=None, sa_type=Text)
+    recommended_action: str | None = Field(default=None, sa_type=Text)
+    model_version: str | None = Field(default=None, max_length=255)
+    error_message: str | None = Field(default=None, sa_type=Text)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc, sa_type=DateTime(timezone=True), index=True
+    )
+    completed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    submission: Submission = Relationship(back_populates="reports")
+    findings: list[ReportFinding] = Relationship(
+        back_populates="report", cascade_delete=True
+    )
+
+
+class ReportFinding(SQLModel, table=True):
+    __tablename__ = "report_finding"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    report_id: uuid.UUID = Field(
+        foreign_key="analysis_report.id", index=True, ondelete="CASCADE"
+    )
+    title: str = Field(max_length=255)
+    description: str = Field(sa_type=Text)
+    severity: RiskLevel = Field(default=RiskLevel.UNKNOWN)
+    evidence: str | None = Field(default=None, sa_type=Text)
+    report: AnalysisReport = Relationship(back_populates="findings")
 
 
 # Generic message

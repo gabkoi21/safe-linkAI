@@ -1,4 +1,9 @@
 .vscode/*
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
 !.vscode/extensions.json
 node_modules/
 backend/app/frontend/

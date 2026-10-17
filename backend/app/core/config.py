@@ -1,10 +1,12 @@
 import warnings
+from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import (
     EmailStr,
     HttpUrl,
     PostgresDsn,
+    SecretStr,
     computed_field,
     field_validator,
     model_validator,
@@ -15,7 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
+        env_file=Path(__file__).resolve().parents[3] / ".env",
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -29,6 +31,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: PostgresDsn
+    # Backend only. Never expose provider credentials through VITE_* variables.
+    GOOGLE_API_KEY: SecretStr | None = None
+    GOOGLE_AI_MODEL: str = "gemma-4-26b-a4b-it"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
