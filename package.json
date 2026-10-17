@@ -1,5 +1,5 @@
 {
-  "name": "fastapi-full-stack-template",
+  "name": "safelink-ai",
   "private": true,
   "workspaces": [
     "frontend",

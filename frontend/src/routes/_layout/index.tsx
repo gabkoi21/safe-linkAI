@@ -26,7 +26,7 @@ import SecurityReport, {
   type SecurityReportData,
 } from "@/components/Common/SecurityReport"
 import { useTheme } from "@/components/theme-provider"
-import { analyzeMessage } from "@/lib/messageAnalysis"
+import { analyzeMessage, analyzeUrl } from "@/lib/messageAnalysis"
 import "./home.css"
 
 export const Route = createFileRoute("/_layout/")({
@@ -80,18 +80,6 @@ function Dashboard() {
   const [report, setReport] = useState<SecurityReportData | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const analysisInFlight = useRef(false)
-  const [reviewUrl, setReviewUrl] = useState<string | null>(null)
-  const reviewDialog = useRef<HTMLDialogElement>(null)
-  const [confirmCancel, setConfirmCancel] = useState(false)
-  const cancelDialog = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
-    if (confirmCancel) cancelDialog.current?.showModal()
-    else cancelDialog.current?.close()
-  }, [confirmCancel])
-  useEffect(() => {
-    if (reviewUrl) reviewDialog.current?.showModal()
-    else reviewDialog.current?.close()
-  }, [reviewUrl])
   const [query, setQuery] = useState("")
   const hash = useLocation({ select: (location) => location.hash })
   const navigate = useNavigate()
@@ -105,6 +93,27 @@ function Dashboard() {
     null,
   )
   const input = useRef<HTMLInputElement>(null)
+  async function submitUrl(content: string) {
+    if (analysisInFlight.current) return
+    analysisInFlight.current = true
+    setAnalyzing(true)
+    setReport(null)
+    setMessage("Checking URL patterns and reputation…")
+    try {
+      const analysis = await analyzeUrl(content)
+      setReport({ type: "url", content, analysis })
+      setMessage("")
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "URL analysis failed. Please try again.",
+      )
+    } finally {
+      analysisInFlight.current = false
+      setAnalyzing(false)
+    }
+  }
   function selectFiles(selected: File[]) {
     if (
       selected.length > 1 ||
@@ -153,7 +162,7 @@ function Dashboard() {
         const parsed = new URL(url)
         if (!["http:", "https:"].includes(parsed.protocol)) throw new Error()
         setMessage("")
-        setReviewUrl(parsed.href)
+        await submitUrl(parsed.href)
         return
       } catch {
         setMessage("Enter a valid http:// or https:// URL.")
@@ -409,8 +418,13 @@ function Dashboard() {
                         setMessage("")
                       }}
                     />
-                    <button type="submit" className="analyze-button">
-                      <Rocket size={14} /> Analyze URL
+                    <button
+                      type="submit"
+                      className="analyze-button"
+                      disabled={analyzing}
+                      aria-busy={analyzing}
+                    >
+                      <Rocket size={14} /> {analyzing ? "Analyzing URL…" : "Analyze URL"}
                     </button>
                   </form>
                 )}
@@ -421,8 +435,8 @@ function Dashboard() {
                 )}
               </div>
               <div className="submission-security">
-                <LockKeyhole size={12} /> Messages are analyzed by Google AI and
-                saved privately. URL and file analysis are coming next.
+                <LockKeyhole size={12} /> Messages and URLs are sent to Google
+                services and saved privately. File analysis is coming next.
               </div>
             </section>
             {!submitView && (
@@ -578,8 +592,8 @@ function Dashboard() {
                 showInfo(
                   title,
                   title === "FAQ"
-                    ? "Message analysis uses Gemma 4 through Google AI. Submitted messages and reports are saved privately. URL and file analysis are not available yet."
-                    : `${title} content will be available when SafeLink AI launches. Messages submitted for analysis are sent to Google AI and saved privately. Files and URLs remain on your device.`,
+                    ? "Messages and URLs use Gemma 4 through Google AI. URLs also request a Google Safe Browsing lookup; unavailable checks are labeled. Submissions and reports are saved privately. File analysis is not available yet."
+                    : `${title} content will be available when SafeLink AI launches. Messages and URLs submitted for analysis are sent to Google services and saved privately. Selected files remain on your device.`,
                 )
               }
             >
@@ -589,131 +603,6 @@ function Dashboard() {
           ))}
         </nav>
       </footer>
-      <dialog
-        className="url-review"
-        ref={reviewDialog}
-        onCancel={(event) => {
-          event.preventDefault()
-          setConfirmCancel(true)
-        }}
-        onClose={() => setReviewUrl(null)}
-        aria-labelledby="url-review-title"
-      >
-        <header className="url-review-header">
-          <h2 id="url-review-title">Submit URL Analysis</h2>
-          <button
-            type="button"
-            className="review-close"
-            aria-label="Close URL analysis"
-            onClick={() => setConfirmCancel(true)}
-          >
-            <X size={18} />
-          </button>
-        </header>
-        <div className="url-review-body">
-          <div className="url-review-progress">
-            <progress
-              value={100}
-              max={100}
-              aria-label="URL validation complete"
-            />
-            <span className="review-percentage">100%</span>
-          </div>
-          <p className="url-review-status">URL validated locally</p>
-          <h3>URL</h3>
-          <div className="url-review-summary">
-            <p className="review-address">{reviewUrl}</p>
-            <div className="review-metadata">
-              <span>{reviewUrl ? new URL(reviewUrl).hostname : ""}</span>
-              <span className="review-complete">
-                <Check size={14} /> Complete
-              </span>
-            </div>
-            <p className="review-note">
-              Ready for review · URL content has not been fetched or classified
-            </p>
-            <fieldset className="review-scan-options">
-              <legend className="sr-only">Scan type</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="scan-mode"
-                  value="quick"
-                  defaultChecked
-                />{" "}
-                Quick Scan
-              </label>
-            </fieldset>
-          </div>
-          <p className="review-consent">
-            Only submit URLs you are authorized to analyze. This frontend
-            preview does not send URLs to a server or perform a scan.
-          </p>
-        </div>
-        <footer className="url-review-actions">
-          <button
-            type="button"
-            className="review-cancel"
-            onClick={() => setConfirmCancel(true)}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="analyze-button review-analyze"
-            onClick={() => {
-              setReviewUrl(null)
-              setMessage(
-                "URL analysis is not available yet. Use Message to check text.",
-              )
-            }}
-          >
-            Analyze
-          </button>
-        </footer>
-      </dialog>
-      <dialog
-        className="cancel-confirmation"
-        ref={cancelDialog}
-        aria-labelledby="cancel-title"
-        aria-describedby="cancel-description"
-        onCancel={() => setConfirmCancel(false)}
-        onClose={() => setConfirmCancel(false)}
-      >
-        <header className="cancel-confirmation-header">
-          <h2 id="cancel-title">Confirm Cancellation</h2>
-          <button
-            type="button"
-            className="cancel-close"
-            aria-label="Close cancellation confirmation"
-            onClick={() => setConfirmCancel(false)}
-          >
-            <X size={15} />
-          </button>
-        </header>
-        <p id="cancel-description">
-          Are you sure that you want to cancel your submission process?
-        </p>
-        <footer className="cancel-confirmation-actions">
-          <button
-            type="button"
-            className="cancel-no"
-            onClick={() => setConfirmCancel(false)}
-          >
-            No <X size={12} />
-          </button>
-          <button
-            type="button"
-            className="cancel-yes"
-            onClick={() => {
-              setConfirmCancel(false)
-              setReviewUrl(null)
-            }}
-          >
-            Yes <Check size={13} />
-          </button>
-        </footer>
-      </dialog>
       <SecurityReport report={report} onClose={() => setReport(null)} />
       {dialog && (
         <div className="info-overlay">

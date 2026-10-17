@@ -1,4 +1,4 @@
-# FastAPI Project - Backend
+# SafeLink AI - Backend
 
 ## Requirements
 
@@ -70,7 +70,8 @@ they do not verify identities, fetch links, or guarantee safety.
 Provider failures create a failed report without a risk score. Invalid model
 output is rejected. Errors return a readable `detail` with HTTP 429 (quota),
 502 (provider/invalid output), 503 (configuration/database), or 504 (timeout).
-No generated example is substituted. URL and file analysis remain unavailable.
+No generated example is substituted. URL analysis is described below; file
+analysis remains unavailable.
 
 Run isolated tests without connecting to Google or PostgreSQL:
 
@@ -79,6 +80,37 @@ Run isolated tests without connecting to Google or PostgreSQL:
 ```
 
 ## General Workflow
+
+### URL analysis and reputation
+
+`POST /api/v1/analysis/url` accepts `{"url":"https://example.com/"}`. It validates
+HTTP/HTTPS URLs, rejects embedded credentials and local/private IP addresses,
+and sends URL text to Gemma without fetching the destination website.
+The response adds `ai_risk_score`, `ai_risk_level`, and a separate `reputation`
+object from Google Safe Browsing v5 to the normal report fields.
+
+Reputation status is `matched`, `no_match`, `unavailable`, or `not_configured`.
+No match is not proof of safety. Provider outages and rejected credentials are
+never treated as a no-match result. A known threat match raises overall risk to
+high (at least 90) while preserving Gemma's original URL-pattern assessment.
+Both results are stored in `analysis_report.analysis_details`; apply migration
+`c95e143b2d64` before using this endpoint.
+
+Configure a credential authorized for `safebrowsing.googleapis.com`. The lookup
+supports `GOOGLE_SAFE_BROWSING_ACCESS_TOKEN` (OAuth bearer token, preferred when
+the endpoint requires OAuth) or `GOOGLE_SAFE_BROWSING_API_KEY`. Without either,
+it tries `GOOGLE_API_KEY`. The existing AI Studio key was rejected with HTTP 401
+in live testing, so AI URL-pattern review works but reputation is unavailable
+until an authorized credential is supplied. OAuth access tokens expire and must
+be renewed; restart the backend after replacing credentials in `.env`.
+
+Safe Browsing is intended for non-commercial use. Use Google Web Risk for a
+commercial deployment. See https://developers.google.com/safe-browsing/reference.
+The lookup sends the full URL to Google. Successful positive and negative checks
+are cached in a bounded per-process cache for the provider-specified duration.
+Secrets are sent in headers, never in query strings.
+
+### Backend development
 
 Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter at `.venv/bin/python` in the project root.
 

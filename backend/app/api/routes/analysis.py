@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -59,7 +61,11 @@ def create_url_analysis(
         # looks ordinary. Keep Gemma's original assessment separately.
         if reputation.status == "matched":
             return ai.model_copy(
-                update={"risk_score": max(90, ai.risk_score), "risk_level": "high"}
+                update={
+                    "risk_score": max(90, ai.risk_score),
+                    "risk_level": "high",
+                    "recommended_action": "Avoid opening this URL or entering personal information. Google Safe Browsing lists a known threat.",
+                }
             )
         return ai
 
@@ -128,6 +134,3 @@ def _create_analysis(
         report_id=report_id,
         model_version=settings.GOOGLE_AI_MODEL,
     )
-
-
-from collections.abc import Callable

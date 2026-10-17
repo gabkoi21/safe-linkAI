@@ -71,12 +71,22 @@ _cache_lock = threading.Lock()
 
 def check_url_reputation(url: str) -> ReputationResult:
     key = settings.GOOGLE_SAFE_BROWSING_API_KEY or settings.GOOGLE_API_KEY
-    if not key:
+    token = settings.GOOGLE_SAFE_BROWSING_ACCESS_TOKEN
+    credential = token or key
+    if not credential:
         return ReputationResult(
             status="not_configured",
             detail="Reputation check is not configured. No reputation verdict is available.",
         )
-    cache_key = (hashlib.sha256(key.get_secret_value().encode()).hexdigest(), url)
+    cache_key = (
+        hashlib.sha256(credential.get_secret_value().encode()).hexdigest(),
+        url,
+    )
+    if token:
+        auth_header = {"Authorization": f"Bearer {token.get_secret_value()}"}
+    else:
+        assert key is not None
+        auth_header = {"X-Goog-Api-Key": key.get_secret_value()}
     with _cache_lock:
         cached = _cache.get(cache_key)
         if cached and cached[0] > time.monotonic():
@@ -88,22 +98,21 @@ def check_url_reputation(url: str) -> ReputationResult:
         with httpx.Client(timeout=7, follow_redirects=False) as client:
             response = client.get(
                 "https://safebrowsing.googleapis.com/v5/urls:search",
-                params={"urls": url},
-                headers={"X-Goog-Api-Key": key.get_secret_value()},
+                params={"urls": url, "alt": "json"},
+                headers={**auth_header, "Accept": "application/json"},
             )
         if response.status_code != 200:
             logger.warning(
                 "Safe Browsing lookup failed (HTTP %s)", response.status_code
             )
             detail = (
-                "Google Safe Browsing access was rejected. Enable the Safe Browsing API "
-                "for this Google Cloud project and check API key restrictions."
+                "Google Safe Browsing could not authorize this lookup. No reputation verdict was obtained."
                 if response.status_code in (400, 401, 403)
                 else "Google Safe Browsing is temporarily unavailable. No reputation verdict was obtained."
             )
             return ReputationResult(status="unavailable", detail=detail)
         payload = response.json()
-        if not isinstance(payload, dict):
+        if not isinstance(payload, dict) or "error" in payload:
             raise ValueError("Invalid reputation response")
         threats = payload.get("threats", [])
         if not isinstance(threats, list) or any(

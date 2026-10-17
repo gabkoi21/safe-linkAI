@@ -66,6 +66,7 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GOOGLE_AI_MODEL: ${GOOGLE_AI_MODEL:-gemma-4-26b-a4b-it}
       GOOGLE_SAFE_BROWSING_API_KEY: ${GOOGLE_SAFE_BROWSING_API_KEY:-}
+      GOOGLE_SAFE_BROWSING_ACCESS_TOKEN: ${GOOGLE_SAFE_BROWSING_ACCESS_TOKEN:-}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]

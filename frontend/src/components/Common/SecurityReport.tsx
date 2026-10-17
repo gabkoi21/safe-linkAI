@@ -9,15 +9,14 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import type { MessageAnalysis } from "@/lib/messageAnalysis"
+import type { MessageAnalysis, UrlAnalysis } from "@/lib/messageAnalysis"
 import "./security-report.css"
 
 export type ReportType = "message" | "url" | "file"
-export interface SecurityReportData {
-  type: "message"
-  content: string
-  analysis: MessageAnalysis
-}
+export type SecurityReportData = { content: string } & (
+  | { type: "message"; analysis: MessageAnalysis }
+  | { type: "url"; analysis: UrlAnalysis }
+)
 export default function SecurityReport({
   report,
   onClose,
@@ -37,6 +36,8 @@ export default function SecurityReport({
   const active = report.type
   const { analysis, content } = report
   const level = analysis.risk_level
+  const urlAnalysis = report.type === "url" ? report.analysis : null
+  const reputation = urlAnalysis?.reputation
   const assessment = {
     score: analysis.risk_score,
     level: level.charAt(0).toUpperCase() + level.slice(1),
@@ -46,7 +47,10 @@ export default function SecurityReport({
   const Icon =
     active === "message" ? MessageCircle : active === "url" ? Link : FileText
   async function copyReport() {
-    const text = `SafeLink AI — Security Analysis Report\nType: ${active}\nContent: ${content}\nAI risk indicator score: ${assessment.score}/100 (${assessment.level})\nAI assessment; not a guarantee of safety.\n${assessment.summary}\n\nWarning signs:\n${analysis.findings.map(({ title, description }) => `${title}: ${description}`).join("\n")}\n\nRecommended safety action: ${assessment.action}`
+    const reputationText = reputation
+      ? `\nGoogle Safe Browsing: ${reputation.status}\n${reputation.detail}\nThreat types: ${reputation.threat_types.join(", ") || "None reported"}\nChecked: ${reputation.checked_at ?? "Not checked"}\nGemma URL-pattern score: ${urlAnalysis?.ai_risk_score}/100\n`
+      : ""
+    const text = `SafeLink AI — Security Analysis Report\nType: ${active}\nContent: ${content}\nRisk indicator score: ${assessment.score}/100 (${assessment.level})\nAssessment; not a guarantee of safety.\n${assessment.summary}\n${reputationText}\nGemma warning signs:\n${analysis.findings.map(({ title, description }) => `${title}: ${description}`).join("\n")}\n\nRecommended safety action: ${assessment.action}`
     try {
       await navigator.clipboard.writeText(text)
       setCopyStatus("Report copied")
@@ -113,7 +117,7 @@ export default function SecurityReport({
           <div
             className="risk-gauge"
             role="img"
-            aria-label={`AI risk indicator score ${assessment.score} out of 100`}
+            aria-label={`Risk indicator score ${assessment.score} out of 100`}
           >
             <svg viewBox="0 0 200 115" aria-hidden="true">
               <path className="gauge-track" d="M15 100 A85 85 0 0 1 185 100" />
@@ -130,17 +134,54 @@ export default function SecurityReport({
             </div>
           </div>
           <p className="risk-caption">
-            AI risk indicator score — not a malware detection probability
+            {active === "url"
+              ? "Combined risk indicator score"
+              : "AI risk indicator score"}{" "}
+            — not a malware detection probability
           </p>
           <p className="risk-summary">{assessment.summary}</p>
           <p className="report-disclaimer">
-            Based on the submitted message only. AI can make mistakes; this is
-            not a guarantee of safety or independent verification of the sender.
+            {active === "url"
+              ? "The website was not opened. Gemma reviews URL text only; the reputation result below is a separate lookup. This is not a guarantee of safety."
+              : "Based on the submitted message only. AI can make mistakes; this is not a guarantee of safety or independent verification of the sender."}
           </p>
         </div>
         <section className="report-warning-section">
+          {reputation && (
+            <section aria-label="URL reputation">
+              <h3>URL reputation — Google Safe Browsing</h3>
+              <p>
+                <strong>
+                  {reputation.status === "matched"
+                    ? "Known threat listed"
+                    : reputation.status === "no_match"
+                      ? "No match — safety not confirmed"
+                      : "Reputation not checked"}
+                </strong>
+              </p>
+              <p>{reputation.detail}</p>
+              {reputation.threat_types.length > 0 && (
+                <p>Threat types: {reputation.threat_types.join(", ")}</p>
+              )}
+              {reputation.checked_at && (
+                <p>
+                  Checked: {new Date(reputation.checked_at).toLocaleString()}
+                </p>
+              )}
+              <p>
+                Gemma URL-pattern assessment: {urlAnalysis?.ai_risk_score}/100 (
+                {urlAnalysis?.ai_risk_level}).
+              </p>
+              {reputation.status === "matched" && (
+                <p>
+                  The known threat match raises the overall risk rating to high.
+                  Avoid opening this URL.
+                </p>
+              )}
+            </section>
+          )}
           <h3>
-            <AlertTriangle size={16} /> Detected warning signs{" "}
+            <AlertTriangle size={16} /> Detected warning signs (Gemma)
           </h3>
           {analysis.findings.length === 0 && (
             <p>No specific warning signs identified.</p>

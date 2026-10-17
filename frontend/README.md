@@ -1,4 +1,4 @@
-# FastAPI Project - Frontend
+# SafeLink AI - Frontend
 
 The frontend is built with [Vite](https://vitejs.dev/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router), [Tailwind CSS](https://tailwindcss.com/), and [shadcn/ui](https://ui.shadcn.com/).
 
@@ -22,31 +22,16 @@ report saved by the backend. Start the backend on port 8000 and configure its
 Google API key and database first. Vite proxies `/api` to that backend when
 `VITE_API_URL` is unset; a configured `VITE_API_URL` overrides this. Messages are
 sent to Google AI and stored privately. Failures show an error, without a sample
-report. URL and file checks are not connected yet.
+report. URL checks are connected through `/api/v1/analysis/url`; the report
+separates Gemma's URL-pattern review from Google Safe Browsing reputation.
+Unavailable reputation checks are labeled and never shown as a safety verdict.
+File checks are not connected yet.
 
 Run `uv run bash scripts/prestart.sh` and `uv run fastapi dev` from the `backend` directory, with PostgreSQL running in Docker Compose. See [../development.md](../development.md) for the complete setup.
 
 To serve the frontend with FastAPI, run `bun run build` from the `frontend` directory and open `http://localhost:8000`.
 
 Check `frontend/package.json` to see the other available commands.
-
-## Removing the Frontend
-
-If you are developing an API-only app and want to remove the frontend, you can do it easily:
-
-* Remove the `./frontend` directory.
-
-* In the `backend/app/main.py` file, remove the `app.frontend()` call.
-
-* In the `backend/Dockerfile` file, remove the frontend build stage and the `COPY --from=frontend-build` instruction.
-
-* In the `compose.override.yml` file, remove the `playwright` service.
-
-* In the `.github/workflows/deploy.yml` file, remove the **Set up Bun**, **Install frontend dependencies**, and **Build frontend** steps.
-
-* In the `.fastapicloudignore` file, remove the `!backend/app/frontend/` entry.
-
-Done, you now have an API-only app. 🤓
 
 ## Generate Client
 

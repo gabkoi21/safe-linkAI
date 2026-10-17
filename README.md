@@ -1,88 +1,42 @@
-# Full Stack FastAPI Template
+# SafeLink AI
 
-[![Test Docker Compose](../../actions/workflows/test-docker-compose.yml/badge.svg)](../../actions/workflows/test-docker-compose.yml)
-[![Test Backend](../../actions/workflows/test-backend.yml/badge.svg)](../../actions/workflows/test-backend.yml)
+SafeLink AI helps people review suspicious messages and URLs for signs of scams and other threats.
 
-## Technology Stack and Features
+## Features
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-  - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-  - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-  - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-  - 🧩 Built into the backend application and served by FastAPI on the same domain as the API.
-  - 💃 Using TypeScript, hooks, [Vite](https://vitejs.dev), and other parts of a modern frontend stack.
-  - 🎨 [Tailwind CSS](https://tailwindcss.com) and [shadcn/ui](https://ui.shadcn.com) for the frontend components.
-  - 🤖 An automatically generated frontend client.
-  - 🧪 [Playwright](https://playwright.dev) for end-to-end testing.
-  - 🦇 Dark mode support.
-- ☁️ [FastAPI Cloud](https://fastapicloud.com) for deployment.
-- 🐋 [Docker Compose](https://www.docker.com) for local services and self-hosted deployment.
-  - 📞 [Traefik](https://traefik.io) as a reverse proxy with automatic HTTPS.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email-based password recovery.
-- ✉️ [React Email](https://react.email) for email templates.
-- 📬 [Mailpit](https://mailpit.axllent.org) for local email testing during development.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+- Message analysis through Google AI, with saved reports.
+- URL pattern analysis and Google Safe Browsing reputation checks.
+- Risk indicators, findings, and suggested safety actions.
+- Account management, password recovery, and dark mode.
 
-### Dashboard Login
+Analysis is an assessment, not a guarantee of safety. Unavailable reputation checks are shown explicitly. File analysis is not connected yet.
 
-![Dashboard login screenshot](img/login.png)
+## Local development
 
-### Dashboard - Admin
+1. Copy `.env.example` to `.env` and configure the database, application secret, and Google API credentials.
+2. Follow [development.md](development.md) to start the database and backend.
+3. Run `bun install` and `bun run dev` from the project root to start the frontend.
+4. Open http://localhost:5173.
 
-![Admin dashboard screenshot](img/dashboard.png)
+Submitted messages and URLs are sent to Google services and saved by the backend. Selected files remain on your device.
 
-### Dashboard - Items
+## Project structure
 
-![Items dashboard screenshot](img/dashboard-items.png)
+- `frontend/`: React and TypeScript application.
+- `backend/`: Python API, analysis services, and database migrations.
+- `packages/react-email/`: account email templates.
+- `docs/`: project planning and supporting documentation.
 
-### Dashboard - Dark Mode
+The backend uses FastAPI, SQLModel, and PostgreSQL. The frontend uses Vite, TanStack Router, and Tailwind CSS.
 
-![Dark mode dashboard screenshot](img/dashboard-dark.png)
+## Documentation
 
-### React Email Templates
-
-![Email templates screenshot](img/react-email.png)
-
-### Mailpit - Local Email Testing
-
-![Mailpit screenshot](img/mailpit.png)
-
-### Interactive API Documentation
-
-![API docs](img/docs.png)
-
-## How to Use It
-
-Click the **Use this template** button at the top of this page to create a new repository.
-
-## Backend Development
-
-Backend docs: [backend/README.md](./backend/README.md).
-
-## Frontend Development
-
-Frontend docs: [frontend/README.md](./frontend/README.md).
-
-## Deployment
-
-FastAPI Cloud deployment: [deployment.md](./deployment.md).
-
-Self-hosted deployment with Docker Compose: [deployment-docker-compose.md](./deployment-docker-compose.md).
-
-## Development
-
-General development docs: [development.md](./development.md).
-
-This includes the local FastAPI and Vite workflow, Docker Compose services, `.env` configuration, and more.
-
-## Release Notes
-
-Check the file [release-notes.md](./release-notes.md).
+- [Backend](backend/README.md)
+- [Frontend](frontend/README.md)
+- [Development](development.md)
+- [Deployment](deployment.md)
+- [Docker Compose deployment](deployment-docker-compose.md)
 
 ## License
 
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+See [LICENSE](LICENSE) for the MIT license and retained third-party copyright notice.

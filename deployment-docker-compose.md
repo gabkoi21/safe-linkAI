@@ -1,11 +1,11 @@
-# FastAPI Project - Docker Compose Deployment
+# SafeLink AI - Docker Compose Deployment
 
 You can deploy the project to your own remote server with Docker Compose. The deployment configuration includes Traefik to handle HTTPS and route incoming traffic to the application.
 
 ## Preparation
 
 * Have a remote server ready and available.
-* Configure DNS records pointing to the server for the application domain and any supporting service subdomains you want to expose, such as `fastapi-project.example.com` and `adminer.fastapi-project.example.com`.
+* Configure DNS records pointing to the server for the application domain and any supporting service subdomains you want to expose, such as `safelink.example.com` and `adminer.safelink.example.com`.
 * Install and configure [Docker](https://docs.docker.com/engine/install/) on the remote server (Docker Engine, not Docker Desktop).
 
 ## Copy the Code
@@ -23,8 +23,8 @@ The `--filter=":- .gitignore"` option tells `rsync` to use the same ignore rules
 Set the application domain, project name, and first superuser email:
 
 ```bash
-export DOMAIN=fastapi-project.example.com
-export PROJECT_NAME="Full Stack FastAPI Project"
+export DOMAIN=safelink.example.com
+export PROJECT_NAME="SafeLink AI"
 export FIRST_SUPERUSER=admin@example.com
 ```
 
@@ -120,10 +120,10 @@ When the runner is online, open the repository's **Actions** tab, select **Deplo
 
 ## URLs
 
-Replace `fastapi-project.example.com` with your domain.
+Replace `safelink.example.com` with your domain.
 
-Application (frontend and API): `https://fastapi-project.example.com`
+Application (frontend and API): `https://safelink.example.com`
 
-Interactive API docs: `https://fastapi-project.example.com/docs`
+Interactive API docs: `https://safelink.example.com/docs`
 
-Adminer: `https://adminer.fastapi-project.example.com`
+Adminer: `https://adminer.safelink.example.com`

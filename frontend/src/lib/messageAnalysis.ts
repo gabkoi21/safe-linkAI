@@ -17,14 +17,37 @@ export interface MessageAnalysis {
 export async function analyzeMessage(
   message: string,
 ): Promise<MessageAnalysis> {
+  return requestAnalysis<MessageAnalysis>("message", { message })
+}
+
+export interface UrlAnalysis extends MessageAnalysis {
+  ai_risk_score: number
+  ai_risk_level: MessageAnalysis["risk_level"]
+  reputation: {
+    provider: "google_safe_browsing"
+    status: "matched" | "no_match" | "unavailable" | "not_configured"
+    threat_types: string[]
+    checked_at: string | null
+    detail: string
+  }
+}
+
+export async function analyzeUrl(url: string): Promise<UrlAnalysis> {
+  return requestAnalysis<UrlAnalysis>("url", { url })
+}
+
+async function requestAnalysis<T extends MessageAnalysis>(
+  kind: "message" | "url",
+  payload: { message: string } | { url: string },
+): Promise<T> {
   const baseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "")
   let response: Response
   try {
-    response = await fetch(`${baseUrl}/api/v1/analysis/message`, {
+    response = await fetch(`${baseUrl}/api/v1/analysis/${kind}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-      signal: AbortSignal.timeout(60000),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(kind === "url" ? 70000 : 60000),
     })
   } catch (error) {
     if (
@@ -42,7 +65,7 @@ export async function analyzeMessage(
     throw new Error(
       typeof body?.detail === "string"
         ? body.detail
-        : "Could not analyze the message. Please try again.",
+        : `Could not analyze the ${kind === "url" ? "URL" : "message"}. Check your input and try again.`,
     )
   }
   if (
@@ -52,5 +75,5 @@ export async function analyzeMessage(
   ) {
     throw new Error("The server returned an invalid report. Please try again.")
   }
-  return body as MessageAnalysis
+  return body as T
 }
